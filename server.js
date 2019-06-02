@@ -5,6 +5,7 @@ const bodyParser = require('body-parser')
 const findOrCreateUser = require('./models.js').findOrCreateUser;
 const addExercise = require('./models.js').addExercise;
 const findUserById = require('./models.js').findUserById;
+const findExercisesByUser = require('./models.js').findExercisesByUser;
 
 const app = express()
 const t = 10000;
@@ -17,12 +18,57 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
+/**
+  GET users's exercise log:
+  GET /api/exercise/log?{userId}[&from][&to][&limit]
+  { } = required, [ ] = optional
+  from, to = dates (yyyy-mm-dd); limit = number
+ */
+app.get("/api/exercise/log?", function(req, res, next) {
+  let query = undefined;
+  let limit = undefined;
+
+  if (!req.query['limit']) {
+    limit = 1000; // hard limit
+  } else {
+    limit = Number(req.query['limit']);
+  }
+
+  try {
+    query = buildQuery(req.query);
+  } catch(e) {
+    res.json(e.toString());
+  }
+
+  findExercisesByUser(query, limit, function(err, doc) {
+    clearTimeout(t);
+    if (err) { return (next(err)); }
+    res.json(doc);
+  })
+});
+
+const buildQuery = function(requestQuery) {
+  let query = {};
+
+  query.userId = validateUserId(requestQuery['userId']);
+
+  query.date = {};
+  if (requestQuery['from']) {
+    query.date['$gte'] = validateDate(requestQuery['from'])
+  }
+  if (requestQuery['to']) {
+    query.date['$lte'] = validateDate(requestQuery['to'])
+  }
+
+  return query;
+}
+
 app.post("/api/exercise/new-user", function(req, res, next) {
   const username = req.body.username;
 
   findOrCreateUser(username, function(err, doc) {
     clearTimeout(t);
-    if(err) { return (next(err)); }
+    if (err) { return (next(err)); }
     res.json(doc);
   });
 });
@@ -43,19 +89,34 @@ app.post("/api/exercise/add", function(req, res, next) {
     } else {
       addExercise(data, function(err, doc) {
         if (err) { return (next(err)); }
-        res.json(doc);
+        res.json(doc);  // todo : return username instead of userId
       });
     }
   })
 });
 
+const validateUserId = function(userId) {
+  try {
+    return mongoose.Types.ObjectId(userId);
+  } catch (e) { throw Error("invalid userId"); }
+}
+
+const validateDate = function(date) {
+  try {
+    const parsedDate = new Date(date);
+    if (parsedDate == 'Invalid Date') {
+      throw Error;
+    } else {
+      return parsedDate;
+    }
+  } catch (e) { throw Error("invalid date"); }
+}
+
 const validateInput = function(input) {
   let parsed = {};
   parsed.description = input.description.toString(); // what could go wrong
-
-  try {
-    parsed.userId = mongoose.Types.ObjectId(input.userId);
-  } catch (e) { throw Error("invalid userId"); }
+  parsed.userId = validateUserId(input.userId);
+  parsed.date = input.userId ? validateDate(input.date) : new Date();
 
   try {
     parsed.duration = Number(input.duration);
@@ -63,10 +124,6 @@ const validateInput = function(input) {
       throw Error;
     }
   } catch (e) { throw Error("invalid duration"); }
-
-  try {
-    parsed.date = new Date(input.date);
-  } catch (e) { throw Error("invalid date"); }
 
   return parsed;
 }

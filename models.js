@@ -14,7 +14,7 @@ const userSchema = new Schema({
 const exerciseSchema = new Schema({
     userId: {type: String, required: true},
     description: {type: String, required: true},
-    duration: {type: Number, required: true},
+    duration: {type: Number, required: true, min: [0, 'Too short duration']},
     date: Date
 });
 
@@ -30,6 +30,22 @@ const addExercise = function(data, done) {
         done(null, exercise);
     });
 }
+
+// 5cf335196d348addad2e6310
+const findExercisesByUser = function(query, limit, done) {
+
+    findUserById(query.userId, function(err, doc) {  // todo? needs separate function?
+        if (err) { return console.error(err); }
+        if (!doc) {
+            done(null, "Unknown userId");
+        }
+        Exercise.find(query, function(err, doc) {
+            if (err) { return console.error(err); }
+            done(null, doc);
+        })
+        .limit(limit);
+    });
+};
 
 const findUserById = function(userId, done) {
     User.findById(userId, function(err, doc) {
@@ -64,4 +80,5 @@ const createUser = function(username, done) {
 
 exports.findOrCreateUser = findOrCreateUser;
 exports.addExercise = addExercise;
+exports.findExercisesByUser = findExercisesByUser;
 exports.findUserById = findUserById;
