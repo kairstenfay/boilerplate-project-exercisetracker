@@ -98,7 +98,7 @@ app.post("/api/exercise/add", function(req, res, next) {
     } else {
       addExercise(data, function(err, doc) {
         if (err) { return (next(err)); }
-        res.json(doc);  // todo : return username instead of userId
+        res.json(doc);  // todo : return user object joined w/ exercises
       });
     }
   })

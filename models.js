@@ -8,11 +8,12 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true })
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
+    _id: Schema.Types.ObjectId,
     username: {type: String, unique: true, required: true},
 });
 
 const exerciseSchema = new Schema({
-    userId: {type: String, required: true},
+    userId: {type: Schema.Types.ObjectId, required: true, ref: 'User'},
     description: {type: String, required: true},
     duration: {type: Number, required: true, min: [0, 'Too short duration']},
     date: Date
@@ -43,7 +44,7 @@ const findExercisesByUser = function(query, limit, done) {
             if (err) { return console.error(err); }
             done(null, doc);
         })
-        .limit(limit);
+        .limit(limit).populate('userId');
     });
 };
 
