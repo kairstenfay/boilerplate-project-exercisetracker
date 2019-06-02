@@ -54,6 +54,13 @@ const findUserById = function(userId, done) {
     });
 };
 
+const findAllUsers = function(done) {
+    User.find(function(err, docs) {
+        if (err) { return console.error(err); }
+        done(null, docs);
+    });
+};
+
 const findOrCreateUser = function(username, done) {
     User.findOne({ username: username}, function(err, doc) {
         if (err) { return console.error(err); }
@@ -82,3 +89,4 @@ exports.findOrCreateUser = findOrCreateUser;
 exports.addExercise = addExercise;
 exports.findExercisesByUser = findExercisesByUser;
 exports.findUserById = findUserById;
+exports.findAllUsers = findAllUsers;

@@ -6,6 +6,7 @@ const findOrCreateUser = require('./models.js').findOrCreateUser;
 const addExercise = require('./models.js').addExercise;
 const findUserById = require('./models.js').findUserById;
 const findExercisesByUser = require('./models.js').findExercisesByUser;
+const findAllUsers = require('./models.js').findAllUsers;
 
 const app = express()
 const t = 10000;
@@ -62,6 +63,14 @@ const buildQuery = function(requestQuery) {
 
   return query;
 }
+
+app.get("/api/exercise/users", function(req, res, next) {
+  findAllUsers(function(err, doc) {
+    clearTimeout(t);
+    if (err) { return (next(err)); }
+    res.json(doc);
+  });
+});
 
 app.post("/api/exercise/new-user", function(req, res, next) {
   const username = req.body.username;
