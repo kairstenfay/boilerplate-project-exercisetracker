@@ -1,23 +1,75 @@
 const express = require('express')
-const app = express()
+const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
 
-const cors = require('cors')
+const findOrCreateUser = require('./models.js').findOrCreateUser;
+const addExercise = require('./models.js').addExercise;
+const findUserById = require('./models.js').findUserById;
 
-const mongoose = require('mongoose')
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track' )
-
-app.use(cors())
+const app = express()
+const t = 10000;
 
 app.use(bodyParser.urlencoded({extended: false}))
 app.use(bodyParser.json())
-
 
 app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
+app.post("/api/exercise/new-user", function(req, res, next) {
+  const username = req.body.username;
+
+  findOrCreateUser(username, function(err, doc) {
+    clearTimeout(t);
+    if(err) { return (next(err)); }
+    res.json(doc);
+  });
+});
+
+app.post("/api/exercise/add", function(req, res, next) {
+  let data = undefined;
+
+  try {
+    data = validateInput(req.body);
+  } catch (e) {
+    res.json(e.toString());
+  }
+
+  findUserById(data.userId, function(err, doc) {
+    if (err) { return (next(err)); }
+    if (!doc) {
+      res.send("unknown user id");
+    } else {
+      addExercise(data, function(err, doc) {
+        if (err) { return (next(err)); }
+        res.json(doc);
+      });
+    }
+  })
+});
+
+const validateInput = function(input) {
+  let parsed = {};
+  parsed.description = input.description.toString(); // what could go wrong
+
+  try {
+    parsed.userId = mongoose.Types.ObjectId(input.userId);
+  } catch (e) { throw Error("invalid userId"); }
+
+  try {
+    parsed.duration = Number(input.duration);
+    if (!parsed.duration || parsed.duration < 0) {
+      throw Error;
+    }
+  } catch (e) { throw Error("invalid duration"); }
+
+  try {
+    parsed.date = new Date(input.date);
+  } catch (e) { throw Error("invalid date"); }
+
+  return parsed;
+}
 
 // Not found middleware
 app.use((req, res, next) => {
